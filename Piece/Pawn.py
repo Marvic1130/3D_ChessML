@@ -1,4 +1,4 @@
-from Enum import Color
+from Enum.Color import Color
 from Piece import Piece
 
 
@@ -20,9 +20,12 @@ class Pawn(Piece):
                 # 첫 번째 이동이 아닐 경우 1칸 전진 가능
                 moves.append((self.x, self.y + 1))
 
-            # 대각선으로 적군을 공격
-            moves.append((self.x - 1, self.y + 1))
-            moves.append((self.x + 1, self.y + 1))
+            if target is not None and target.y == self.y + 1 and target.color == Color.BLACK:
+                # 대각선으로 적군을 공격
+                if target.x == self.x - 1:
+                    moves.append((self.x - 1, self.y + 1))
+                elif target.x == self.x + 1:
+                    moves.append((self.x + 1, self.y + 1))
         else:
             # 흑색 폰은 아래로 이동
             if self.y == 6:
@@ -33,10 +36,12 @@ class Pawn(Piece):
                 # 첫 번째 이동이 아닐 경우 1칸 전진 가능
                 moves.append((self.x, self.y - 1))
 
-        if target is not None:
-            # 대각선으로 적군을 공격
-            moves.append((self.x - 1, self.y - 1))
-            moves.append((self.x + 1, self.y - 1))
+            if target is not None and target.y == self.y - 1 and target.color == Color.WHITE:
+                # 대각선으로 적군을 공격
+                if target.x == self.x - 1:
+                    moves.append((self.x - 1, self.y - 1))
+                elif target.x == self.x + 1:
+                    moves.append((self.x + 1, self.y - 1))
 
         return moves
 
