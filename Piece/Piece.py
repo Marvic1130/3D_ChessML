@@ -4,19 +4,19 @@ from Enum import Color
 
 
 class Piece(ABC):
-    def __init__(self, id: int, color: Color, x: int, y: int):
-        self.id = id
+    def __init__(self, id_: int, color: Color, x: int, y: int):
+        self.id = id_
         self.color = color
         self.x = x
         self.y = y
         self.live = True
 
     @abstractmethod
-    def validMoveList(self):
+    def valid_move_list(self):
         pass
 
     @abstractmethod
-    def isValidMove(self):
+    def is_valid_move(self):
         pass
 
     @abstractmethod
