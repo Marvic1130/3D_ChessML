@@ -39,7 +39,7 @@ class Piece(ABC):
 
     @x.setter
     def x(self, new_x: int):
-        if -1 < self.__x < 8:
+        if -1 < new_x < 8:
             self.__x = new_x
         else:
             raise ValueError('The x value of piece is between 0 and 7.')
@@ -50,7 +50,7 @@ class Piece(ABC):
 
     @y.setter
     def y(self, new_y: int):
-        if -1 < self.__y < 8:
+        if -1 < new_y < 8:
             self.__y = new_y
         else:
             raise ValueError('The y value of piece is between 0 and 7.')

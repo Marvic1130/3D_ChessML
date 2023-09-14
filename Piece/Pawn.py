@@ -49,8 +49,8 @@ class Pawn(Piece):
         # 이동이 유효한지 확인합니다.
         if target is not None:
             return (target.x, target.y) in self.valid_move_list(target=target)
-        else:
-            return (x, y) in self.valid_move_list()
+        elif x is not None and y is not None:
+            return (x, y) in self.valid_move_list(target=self)
 
     def move(self, x: int, y: int):
         # 폰을 새로운 위치로 이동합니다.
