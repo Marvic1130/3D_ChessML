@@ -12,11 +12,11 @@ class Piece(ABC):
         self.live = True
 
     @abstractmethod
-    def valid_move_list(self):
+    def valid_move_list(self, target=None):
         pass
 
     @abstractmethod
-    def is_valid_move(self):
+    def is_valid_move(self, x, y, target=None):
         pass
 
     @abstractmethod

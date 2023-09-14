@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Color(Enum):
-    White = ("w", 0)
-    Black = ("b", 1)
+    WHITE = ("w", 0)
+    BLACK = ("b", 1)
