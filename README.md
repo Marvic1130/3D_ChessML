@@ -34,6 +34,10 @@
 
 <br>
 
+![image](https://github.com/3DimensionSpaceTime/WikiRepository/assets/56966606/2d20e159-6e42-4db4-8e26-588e2ffe5fb0)
+
+<br>
+
 ## 초기 기획 
 
 ### **1. 기획 및 디자인**
