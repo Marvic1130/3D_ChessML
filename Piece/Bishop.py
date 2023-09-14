@@ -1,4 +1,4 @@
-from Enum import Color
+from Enum.Color import Color
 from Piece import Piece
 
 
