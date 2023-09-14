@@ -47,7 +47,7 @@ class Pawn(Piece):
 
     def is_valid_move(self, x: int = None, y: int = None, target: Piece = None):
         # 이동이 유효한지 확인합니다.
-        if Piece is not None:
+        if target is not None:
             return (target.x, target.y) in self.valid_move_list(target=target)
         else:
             return (x, y) in self.valid_move_list()
@@ -57,10 +57,6 @@ class Pawn(Piece):
         if self.is_valid_move(x=x, y=y):
             self.x = x
             self.y = y
-
-    def live(self):
-        # 폰의 생존 여부를 반환합니다.
-        return self.live
 
     def attack(self, target: Piece):
         # 적군을 공격합니다. (대각선으로 이동한 경우)
