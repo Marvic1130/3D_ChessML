@@ -6,7 +6,7 @@ class Knight(Piece):
     def __init__(self, id_: int, color: Color, x: int, y: int):
         super().__init__(id_, color, x, y)
 
-    def valid_move_list(self):
+    def valid_move_list(self, target: Piece = None):
         # 나이트의 이동 규칙을 구현합니다.
         moves = []
 
