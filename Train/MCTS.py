@@ -63,6 +63,35 @@ def expand(node):
     node.untried_moves = []  # 확장 후 untried_moves 초기화
 
 
+def evaluate_board(board):
+    # 체스 말의 가치에 따른 점수 설정
+    piece_values = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+    }
+
+    score = 0
+    for square, piece in board.piece_map().items():
+        if piece.color == chess.WHITE:
+            score += piece_values.get(piece.piece_type, 0)
+        else:
+            score -= piece_values.get(piece.piece_type, 0)
+
+    if board.is_game_over():
+        result = board.result()
+        if result == '1-0':  # 흰색 승리
+            return 50
+        elif result == '0-1':  # 검은색 승리
+            return -50
+        else:  # 무승부
+            return 0
+
+    return score
+
+
 def simulate(node):
     state = node.state.copy()
 
@@ -71,12 +100,11 @@ def simulate(node):
         move = random.choice(legal_moves)
         state.push(move)
 
-    # 게임 결과를 평가. 승리(1), 패배(-1), 무승부(0).
     if state.is_checkmate():
         if state.turn == chess.WHITE:
-            return -1  # 검은색(Black)이 승리
+            return -50  # 검은색(Black)이 승리
         else:
-            return 1  # 흰색(White)이 승리
+            return 50  # 흰색(White)이 승리
     else:
         return 0  # 무승부
 
