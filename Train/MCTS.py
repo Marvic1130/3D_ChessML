@@ -1,6 +1,7 @@
 import chess
 import random
 import math
+from multiprocessing import Pool
 
 
 class Node:
@@ -134,7 +135,8 @@ def ucb_score(node, epsilon=1e-6):
     return ucb
 
 
-def mcts_search(root_state, num_iterations):
+def mcts_search(arg):
+    root_state, num_iterations = arg
     root_node = Node(root_state)
 
     for _ in range(num_iterations):
@@ -155,3 +157,37 @@ def mcts_search(root_state, num_iterations):
     best_child = max(root_node.children, key=lambda child: child.visits)
 
     return best_child.state  # 최선의 자식 노드 반환
+
+
+def parallel_mcts_search(root_state: chess.Board, num_iterations=1000, processes=4):
+    # multiprocessing.Pool을 사용하여 병렬 처리를 시작.
+    pool = Pool(processes=processes)
+
+    # 병렬 작업을 수행하고 각 작업의 결과를 results에 저장.
+    results = pool.map(mcts_search, [(root_state, num_iterations // 4)] * 4)
+
+    # 병렬 처리 Pool을 종료.
+    pool.close()
+    pool.join()
+
+    # 결과를 병합하기 위한 빈 Node 객체를 생성.
+    merged_results = Node(root_state)
+
+    # 각 병렬 작업의 결과에서 얻은 하위 노드를 병합.
+    for result in results:
+        for child in result.children:
+            # 같은 게임 상태를 가진 하위 노드를 병합.
+            merged_child = next((c for c in merged_results.children if c.state == child.state), None)
+            if merged_child:
+                # 이미 병합된 하위 노드가 있다면 방문 횟수와 승리 횟수를 합산.
+                merged_child.visits += child.visits
+                merged_child.wins += child.wins
+            else:
+                # 이전에 병합된 하위 노드가 없으면 추가.
+                merged_results.children.append(child)
+
+    # 평가 함수 또는 UCB 점수를 기준으로 가장 방문 횟수가 높은 하위 노드를 선택.
+    best_child = max(merged_results.children, key=lambda child: child.visits)
+
+    # 최선의 하위 노드에 해당하는 게임 상태를 반환.
+    return best_child.state
