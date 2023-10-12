@@ -1,193 +1,143 @@
 import chess
-import random
-import math
-from multiprocessing import Pool
+import chess.svg
+import numpy as np
+from Utils import config
 
 
 class Node:
-    def __init__(self, state: chess.Board):
-        self.state = state
-        self.parent = None
-        self.children = []
-        self.wins = 0  # 승리 횟수
-        self.visits = 0  # 방문 횟수
-        self.untried_moves = None
+    def __init__(self, board):
+        self.board = board
+        self.edges = []
+
+    def is_leaf(self):
+        return not self.edges
 
 
-def select(node):
-    if not node.untried_moves and node.children:
-        # 모든 하위 노드가 확장되었을 때, UCB를 사용하여 최선의 하위 노드를 선택.
-        exploration_weight = math.sqrt(2)  # 탐색 가중치
-        best_child = None
-        best_ucb_score = float("-inf")
+class Edge:
+    def __init__(self, in_node, out_node, action, prior):
+        self.id = in_node.state.id + '>' + out_node.state.id
+        self.inNode = in_node
+        self.outNode = out_node
+        self.action = action
+        self.playerTurn = in_node.state.playerTurn
+        self.stats = {
+            'N': 0,
+            'W': 0,
+            'Q': 0,
+            'P': prior,
+        }
 
-        for child in node.children:
-            if child.visits == 0:
-                ucb = float("inf")  # 방문하지 않은 노드에 높은 우선순위 부여
+
+class MCTS:
+    def __init__(self, root: Node, cpuct):
+        self.root = root
+        self.tree = {}
+        self.cpuct = cpuct
+        self.add_node(root)
+
+    def __str__(self):
+        return len(self.tree)
+
+    def move_to_leaf(self):
+        breadcrumbs = []
+        current_node = self.root
+        done = 0
+        value = 0
+
+        while not current_node.is_leaf():
+            legal_moves = list(current_node.board.legal_moves)
+
+            if current_node == self.root:
+                epsilon = config.EPSILON
+                nu = np.random.dirichlet([config.ALPHA] * len(legal_moves))
             else:
-                exploitation_term = child.wins / child.visits  # 이용 부분
-                ucb = exploitation_term + exploration_weight * math.sqrt(math.log(node.visits) / child.visits)
+                epsilon = 0
+                nu = [0] * len(legal_moves)
 
-            if ucb > best_ucb_score:
-                best_ucb_score = ucb
-                best_child = child
+            Nb = 0
+            for edge in current_node.edges:
+                Nb += edge.stats['N']
 
-        return best_child  # 가장 높은 UCB 스코어를 가진 하위 노드 반환
+            maxQU = -99999
+            for idx, action in enumerate(legal_moves):
+                edge = current_node.edges[idx]
 
-    # 모든 하위 노드가 확장되지 않았거나 UCB가 하위 노드를 선택하지 않은 경우, 시도하지 않은 움직임을 선택.
-    if not node.untried_moves:
-        return None  # 모든 움직임을 시도한 경우, 선택 가능한 하위 노드가 없음
+                U = self.cpuct * (
+                        (1 - epsilon) * edge.stats['P'] + epsilon * nu[idx]
+                ) * (np.sqrt(Nb) / (1 + edge.stats['N']))
 
-    move = random.choice(node.untried_moves)  # 랜덤으로 시도하지 않은 움직임 선택
-    new_state = node.state.copy()
-    new_state.push(move)
-    new_node = Node(new_state)
-    new_node.untried_moves = [m for m in node.untried_moves if m != move]
-    new_node.parent = node
-    node.children.append(new_node)
-    return new_node  # 새로운 노드 반환
+                Q = edge.stats['Q']
 
+                if Q + U > maxQU:
+                    maxQU = Q + U
+                    simulation_action = action
+                    simulation_edge = edge
 
-def expand(node):
-    if not node.untried_moves:
-        return
+            new_board = current_node.board.copy()
+            new_board.push(simulation_action)
+            value, done = self.evaluate_board(new_board)
 
-    untried_moves = node.untried_moves.copy()  # 모든 아직 시도하지 않은 움직임 복사
+            current_node = simulation_edge.outNode
+            breadcrumbs.append(simulation_edge)
 
-    for move in untried_moves:
-        new_state = node.state.copy()
-        new_state.push(move)
-        new_node = Node(new_state)
-        new_node.parent = node
-        node.children.append(new_node)
+        return current_node, value, done, breadcrumbs
 
-    node.untried_moves = []  # 확장 후 untried_moves 초기화
+    def back_fill(self, leaf, value, breadcrumbs):
+        current_player = chess.WHITE if leaf.board.turn == chess.BLACK else chess.BLACK
 
+        for edge in breadcrumbs:
+            player_turn = edge.outNode.board.turn
 
-def evaluate_board(board):
-    # 체스 말의 가치에 따른 점수 설정
-    piece_values = {
-        chess.PAWN: 1,
-        chess.KNIGHT: 3,
-        chess.BISHOP: 3,
-        chess.ROOK: 5,
-        chess.QUEEN: 9,
-    }
-
-    score = 0
-    for square, piece in board.piece_map().items():
-        if piece.color == chess.WHITE:
-            score += piece_values.get(piece.piece_type, 0)
-        else:
-            score -= piece_values.get(piece.piece_type, 0)
-
-    if board.is_game_over():
-        result = board.result()
-        if result == '1-0':  # 흰색 승리
-            return 50
-        elif result == '0-1':  # 검은색 승리
-            return -50
-        else:  # 무승부
-            return 0
-
-    return score
-
-
-def simulate(node):
-    state = node.state.copy()
-
-    while not state.is_game_over():
-        legal_moves = list(state.legal_moves)
-        move = random.choice(legal_moves)
-        state.push(move)
-
-    if state.is_checkmate():
-        if state.turn == chess.WHITE:
-            return -50  # 검은색(Black)이 승리
-        else:
-            return 50  # 흰색(White)이 승리
-    else:
-        return 0  # 무승부
-
-
-def backpropagate(node, score):
-    while node:
-        node.visits += 1
-        node.wins += score  # 게임 결과 업데이트.
-
-        # 결과 반전.
-        score *= -1
-
-        node = node.parent
-
-
-def ucb_score(node, epsilon=1e-6):
-    if not node.visits:
-        return float('inf')
-
-    exploration_factor = math.sqrt(2)  # 탐색과 이용 사이의 균형을 조절하는 하이퍼파라미터. 조정 가능.
-
-    exploitation_term = node.wins / node.visits  # 이용 부분
-
-    # UCB 스코어 계산: 이용 부분 + 탐색 부분
-    ucb = exploitation_term + exploration_factor * math.sqrt(math.log(node.visits + 1) / (node.visits + epsilon))
-
-    return ucb
-
-
-def mcts_search(arg):
-    root_state, num_iterations = arg
-    root_node = Node(root_state)
-
-    for _ in range(num_iterations):
-        selected_node = select(root_node)
-
-        if not selected_node:
-            break  # 선택 가능한 노드가 없다면 종료
-
-        if not selected_node.state.is_game_over():
-            expand(selected_node)
-            selected_node = random.choice(selected_node.children)
-
-        result = simulate(selected_node)  # selected_node를 인수로 전달
-
-        backpropagate(selected_node, result)
-
-    # 가장 방문 횟수가 높은 자식 노드 중에서 선택
-    best_child = max(root_node.children, key=lambda child: child.visits)
-
-    return best_child.state  # 최선의 자식 노드 반환
-
-
-def parallel_mcts_search(root_state: chess.Board, num_iterations=1000, processes=4):
-    # multiprocessing.Pool을 사용하여 병렬 처리를 시작.
-    pool = Pool(processes=processes)
-
-    # 병렬 작업을 수행하고 각 작업의 결과를 results에 저장.
-    results = pool.map(mcts_search, [(root_state, num_iterations // 4)] * 4)
-
-    # 병렬 처리 Pool을 종료.
-    pool.close()
-    pool.join()
-
-    # 결과를 병합하기 위한 빈 Node 객체를 생성.
-    merged_results = Node(root_state)
-
-    # 각 병렬 작업의 결과에서 얻은 하위 노드를 병합.
-    for result in results:
-        for child in result.children:
-            # 같은 게임 상태를 가진 하위 노드를 병합.
-            merged_child = next((c for c in merged_results.children if c.state == child.state), None)
-            if merged_child:
-                # 이미 병합된 하위 노드가 있다면 방문 횟수와 승리 횟수를 합산.
-                merged_child.visits += child.visits
-                merged_child.wins += child.wins
+            if player_turn == current_player:
+                direction = 1
             else:
-                # 이전에 병합된 하위 노드가 없으면 추가.
-                merged_results.children.append(child)
+                direction = -1
 
-    # 평가 함수 또는 UCB 점수를 기준으로 가장 방문 횟수가 높은 하위 노드를 선택.
-    best_child = max(merged_results.children, key=lambda child: child.visits)
+            edge.stats['N'] += 1
+            edge.stats['W'] += value * direction
+            edge.stats['Q'] = edge.stats['W'] / edge.stats['N']
 
-    # 최선의 하위 노드에 해당하는 게임 상태를 반환.
-    return best_child.state
+    def add_node(self, node):
+        self.tree[node.board.fen()] = node
+
+    def evaluate_board(self, board):
+        # 초기 평가 점수
+        score = 0
+
+        # 각 말의 상대적 가치 설정
+        piece_values = {
+            chess.PAWN: 1,
+            chess.KNIGHT: 3,
+            chess.BISHOP: 3,
+            chess.ROOK: 5,
+            chess.QUEEN: 9,
+        }
+
+        # 게임 보드를 스캔하며 각 말의 상대적 가치를 계산
+        for square, piece in board.piece_map().items():
+            if piece.color == chess.WHITE:
+                score += piece_values.get(piece.piece_type, 0)
+            else:
+                score -= piece_values.get(piece.piece_type, 0)
+
+        # 게임 종료 여부 확인
+        done = None
+        if board.is_checkmate():
+            # 체크메이트인 경우, 승패 결정
+            if board.turn == chess.WHITE:
+                done = -1  # 검은색 승리
+                score = -np.inf
+            else:
+                done = 1  # 흰색 승리
+                score = np.inf
+
+        elif board.is_stalemate() or board.is_insufficient_material() or \
+                board.can_claim_draw() or board.can_claim_fifty_moves() or \
+                (board.halfmove_clock >= config.DRAW_HALFMOVE_CLOCK):
+
+            done = True  # 무승부
+            score = 0
+
+        return score, done
+
+
