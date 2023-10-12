@@ -1,7 +1,7 @@
 import chess
 import chess.svg
 import numpy as np
-import config
+from Utils import config
 
 
 class Node:
