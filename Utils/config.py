@@ -3,3 +3,7 @@ ALPHA = 0.3
 
 
 DRAW_HALFMOVE_CLOCK = 100
+
+MODEL_PATH = 'Models/v./{}.h5'
+
+MOMENTUM = 0.9
