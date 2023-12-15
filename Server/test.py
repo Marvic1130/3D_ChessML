@@ -23,7 +23,9 @@ print(f"Received: {received_data}")
 
 # 소켓 닫기
 client_socket.close()
-
+post_data = {"host": host, "port": port}
+response = requests.post("http://127.0.0.1:5000/stop", json=post_data)
+print(response.json())
 # 서버의 응답이 전송한 데이터와 일치하는지 확인
 assert test_message == received_data, "Echoed message does not match the sent message"
 print("Test Passed: Sent and received messages match.")
