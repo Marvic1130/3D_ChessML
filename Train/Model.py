@@ -7,7 +7,6 @@ from keras.layers import Dense, Flatten, Conv2D, BatchNormalization, LeakyReLU, 
 from keras.optimizers import Adam
 from keras import regularizers
 from loss import softmax_cross_entropy_with_logits
-
 matplotlib.use('Agg')
 
 
@@ -149,13 +148,13 @@ class ResidualCNN:
             except:
                 try:
                     fig = plt.figure(figsize=(3, len(x)))  # width, height in inches
-                    for i in range(len(x)):
-                        sub = fig.add_subplot(len(x), 1, i + 1)
-                        if i == 0:
+                    for j in range(len(x)):
+                        sub = fig.add_subplot(len(x), 1, j + 1)
+                        if j == 0:
                             clim = (0, 2)
                         else:
                             clim = (0, 2)
-                        sub.imshow([x[i]], cmap='coolwarm', clim=clim, aspect="auto")
+                        sub.imshow([x[j]], cmap='coolwarm', clim=clim, aspect="auto")
 
                     plt.show()
                 except:
